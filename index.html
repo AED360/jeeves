@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Jeeves Task Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+  <style>
+    /* ── Palette ── */
+    :root {
+      --cream:    #f5f0e8;
+      --dark:     #1a1510;
+      --ink:      #2c2416;
+      --faded:    #8a7d6b;
+      --gold:     #8b6914;
+      --gold-lt:  #c4a84a;
+      --rule:     #c8b896;
+      --done-bg:  #ede8df;
+      --paper:    #faf7f2;
+      --green:    #4a6e3a;
+      --red:      #8b2020;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--cream);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      font-family: 'IM Fell English', Georgia, serif;
+      color: var(--ink);
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      padding: 40px 20px 20px;
+      border-bottom: 2px solid var(--rule);
+      margin-bottom: 24px;
+    }
+    .crest { font-size: 22px; color: var(--gold); letter-spacing: 14px; display: block; margin-bottom: 10px; }
+    .title { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 28px; letter-spacing: 0.06em; color: var(--dark); margin-bottom: 6px; }
+    .subtitle { font-style: italic; font-size: 14px; color: var(--faded); letter-spacing: 0.04em; }
+
+    /* ── Sheet status ── */
+    .sheet-status {
+      max-width: 680px; margin: 0 auto 12px; padding: 0 16px;
+      font-size: 11px; font-style: italic; letter-spacing: 0.03em;
+    }
+    .status-checking { color: var(--faded); }
+    .status-connected { color: var(--green); }
+    .status-error { color: var(--red); }
+
+    /* ── Jeeves speech ── */
+    .jeeves-box {
+      max-width: 680px; margin: 0 auto 24px; padding: 16px 24px;
+      background: var(--done-bg);
+      border-left: 3px solid var(--gold);
+      border-right: 3px solid var(--gold);
+    }
+    .jeeves-label { font-size: 9px; letter-spacing: 0.22em; color: var(--gold); display: block; margin-bottom: 6px; font-style: normal; }
+    .jeeves-text { font-style: italic; font-size: 15px; color: var(--ink); line-height: 1.65; }
+
+    /* ── Next three ── */
+    .next-three {
+      max-width: 680px; margin: 0 auto 24px; padding: 16px 24px;
+      border: 1px solid var(--rule); background: var(--paper);
+    }
+    .next-three-title { font-style: italic; color: var(--faded); font-size: 13px; margin-bottom: 12px; }
+    .next-three-list { list-style: none; }
+    .next-three-item {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 5px 0; border-bottom: 1px dotted var(--rule);
+    }
+    .next-three-item:last-child { border-bottom: none; }
+    .next-three-num { font-size: 12px; color: var(--gold); min-width: 18px; }
+    .next-three-text { flex: 1; font-size: 14px; color: var(--ink); }
+    .next-three-group { font-size: 11px; color: var(--faded); font-style: italic; }
+
+    /* ── Add task ── */
+    .add-box { max-width: 680px; margin: 0 auto 20px; padding: 0 16px; }
+    .add-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .task-input {
+      flex: 1; font-family: 'IM Fell English', Georgia, serif;
+      font-size: 14px; font-style: italic;
+      padding: 10px 14px; border: 1px solid var(--rule);
+      background: var(--paper); color: var(--ink); outline: none;
+    }
+    .task-input:focus { border-color: var(--gold); }
+    .task-input::placeholder { color: var(--faded); }
+    .add-btn {
+      font-family: 'IM Fell English', Georgia, serif;
+      font-size: 13px; letter-spacing: 0.05em;
+      padding: 10px 18px; background: var(--dark);
+      color: var(--cream); border: none; cursor: pointer; white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .add-btn:hover { opacity: 0.82; }
+    .add-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Group chips ── */
+    .group-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-family: 'IM Fell English', Georgia, serif;
+      font-size: 11px; letter-spacing: 0.05em;
+      padding: 5px 12px; border: 1px solid var(--rule);
+      background: transparent; color: var(--faded); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .chip:hover { opacity: 0.8; }
+    .chip.active-dark { background: var(--dark); color: var(--cream); border-color: var(--dark); }
+    .chip.active-gold { background: var(--gold); color: var(--cream); border-color: var(--gold); }
+
+    /* ── Filters ── */
+    .filter-row {
+      max-width: 680px; margin: 0 auto 20px; padding: 0 16px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+      align-items: center; justify-content: space-between;
+    }
+    .filter-left { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .filter-label { font-size: 11px; color: var(--faded); font-style: italic; letter-spacing: 0.06em; margin-right: 4px; }
+
+    /* ── Task area ── */
+    .task-area { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+    .group-block { margin-bottom: 28px; }
+    .group-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      border-bottom: 1px solid var(--rule); padding-bottom: 6px; margin-bottom: 10px;
+    }
+    .group-name { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+    .group-count { font-size: 11px; color: var(--faded); font-style: italic; }
+
+    .task-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; background: var(--paper);
+      border: 1px solid transparent;
+      transition: background 0.3s, opacity 0.3s, border-color 0.2s;
+    }
+    .task-row:hover { border-color: var(--rule); }
+    .task-row:hover .delete-btn { color: var(--faded); }
+    .task-row.done { background: var(--done-bg); opacity: 0.65; }
+    .task-row.animating { background: #e8f0e0; }
+
+    .checkbox {
+      width: 20px; height: 20px; border: 1px solid var(--rule);
+      background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: var(--gold); flex-shrink: 0;
+      font-family: Georgia, serif; transition: background 0.2s;
+    }
+    .checkbox.checked { background: var(--done-bg); border-color: var(--gold-lt); color: var(--gold-lt); }
+
+    .task-text { flex: 1; font-size: 14px; color: var(--ink); }
+    .task-text.done { text-decoration: line-through; color: var(--faded); font-style: italic; }
+
+    .delete-btn {
+      background: transparent; border: none; color: transparent;
+      cursor: pointer; font-size: 11px; padding: 2px 6px;
+      font-family: Georgia, serif; transition: color 0.2s;
+    }
+    .delete-btn:hover { color: var(--red) !important; }
+
+    .empty-msg { font-style: italic; color: var(--faded); font-size: 14px; text-align: center; padding: 40px 0; }
+
+    /* ── Footer ── */
+    .footer {
+      max-width: 680px; margin: 32px auto 0; padding: 16px 16px 0;
+      border-top: 1px solid var(--rule);
+      font-size: 12px; color: var(--faded); font-style: italic; text-align: right;
+    }
+
+    /* ── Setup banner ── */
+    .setup-banner {
+      max-width: 680px; margin: 0 auto 20px; padding: 16px 20px;
+      border: 1px dashed var(--gold); background: #fdf8ee;
+      font-size: 13px; line-height: 1.7; color: var(--ink);
+    }
+    .setup-banner strong { color: var(--gold); }
+    .setup-banner code {
+      font-family: monospace; font-size: 12px;
+      background: var(--done-bg); padding: 1px 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="crest">✦</span>
+  <h1 class="title">The Jeeves Task Ledger</h1>
+  <p class="subtitle">Personal Arrangements &amp; Obligations</p>
+</div>
+
+<div class="sheet-status" id="sheet-status">
+  <span class="status-checking">⟳ Consulting the ledger…</span>
+</div>
+
+<div class="jeeves-box">
+  <span class="jeeves-label">JEEVES</span>
+  <p class="jeeves-text" id="jeeves-text">"One moment, Madam. I am consulting the ledger…"</p>
+</div>
+
+<div id="next-three-container"></div>
+
+<div id="setup-banner-container"></div>
+
+<div class="add-box">
+  <div class="add-row">
+    <input class="task-input" id="task-input" placeholder="State your obligation, Madam…" type="text">
+    <button class="add-btn" id="add-btn" onclick="addTask()">Add to Ledger</button>
+  </div>
+  <div class="group-row" id="group-selector"></div>
+</div>
+
+<div class="filter-row">
+  <div class="filter-left">
+    <span class="filter-label">View:</span>
+    <div id="filter-chips"></div>
+  </div>
+  <button class="chip" id="toggle-completed" onclick="toggleCompleted()">Hide Completed</button>
+</div>
+
+<div class="task-area" id="task-area"></div>
+
+<div class="footer" id="footer">Nothing outstanding, Madam.</div>
+
+<script>
+// ── Configuration ──────────────────────────────────────────────
+// STEP 1: After deploying your Apps Script, paste the URL below.
+const APPS_SCRIPT_URL = ""; // <-- paste your Apps Script Web App URL here
+
+const GROUPS = ["Personal", "Work", "Errands", "Creative", "Urgent"];
+const LS_KEY  = "jeeves_tasks_v2";
+const LS_CTR  = "jeeves_counter_v2";
+
+// ── State ──────────────────────────────────────────────────────
+let tasks        = [];
+let nextId       = 1;
+let selectedGroup = "Personal";
+let filterGroup  = "All";
+let showCompleted = true;
+let sheetMode    = false; // true once Apps Script URL is configured and working
+
+// ── Quips ──────────────────────────────────────────────────────
+const QUIPS = {
+  add:      ["Very good, Madam. I have added that to your obligations.",
+             "Considered done. The item has been duly noted.",
+             "Quite. I shall ensure it does not escape your attention.",
+             "As you wish. I have recorded the matter with appropriate gravity.",
+             "Noted with the care such matters deserve, Miss Amy."],
+  complete: ["Splendid. One fewer burden upon your shoulders, Madam.",
+             "Admirably dispatched. You continue to surprise me.",
+             "Most satisfactory. The deed is done.",
+             "Capital work, Miss Amy. I shall strike it from the ledger forthwith.",
+             "You have acquitted yourself with distinction in this matter."],
+  undo:     ["I see. The matter requires further attention. Quite understandable.",
+             "A temporary setback, I am sure. The item is restored to the roster.",
+             "These things happen, Madam. I have reinstated it without judgment.",
+             "Not to worry. I have never found reversals to be a mark of character."],
+  delete:   ["As you wish. I shall say nothing further on the matter.",
+             "Expunged. We need never speak of it again.",
+             "Gone, Madam. Utterly and without ceremony."],
+  allDone:  "Every item attended to, Miss Amy. I confess to a quiet professional satisfaction.",
+  empty:    "The slate is entirely clean, Madam. Might I suggest a celebratory cup of tea?",
+};
+
+const RETURN_GREETINGS = [
+  n => `Welcome back, Madam. I have kept careful watch over your ${n} outstanding obligation${n!==1?"s":""}.`,
+  n => `Ah, you have returned. The ledger stands at ${n} item${n!==1?"s":""} yet unresolved.`,
+  n => `Good to have you back, Miss Amy. I trust the interval was restorative. You have ${n} matter${n!==1?"s":""} awaiting attention.`,
+  () => `I had begun to wonder, Madam. No matter — you are here now, and that is what counts.`,
+];
+
+function quip(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// ── Jeeves speaks ──────────────────────────────────────────────
+function speak(msg) {
+  document.getElementById("jeeves-text").textContent = `"${msg}"`;
+}
+
+// ── Storage: Apps Script (read/write) or localStorage (fallback) ──
+async function loadTasks() {
+  if (APPS_SCRIPT_URL) {
+    try {
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=read`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.tasks) {
+        tasks = data.tasks;
+        nextId = data.nextId || (Math.max(0, ...tasks.map(t=>t.id)) + 1);
+        sheetMode = true;
+        setSheetStatus("connected");
+        greetOnLoad();
+        render();
+        return;
+      }
+    } catch(e) {
+      console.warn("Apps Script unavailable, falling back to localStorage:", e.message);
+      setSheetStatus("error", e.message);
+    }
+  } else {
+    setSheetStatus("setup");
+  }
+
+  // localStorage fallback
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    const ctr = localStorage.getItem(LS_CTR);
+    if (ctr) nextId = parseInt(ctr, 10) || 1;
+    if (raw) {
+      tasks = JSON.parse(raw);
+      greetOnLoad();
+    } else {
+      tasks = [
+        { id: nextId++, text: "Review morning correspondence", group: "Work", done: false },
+        { id: nextId++, text: "Acquire a suitable hat for the season", group: "Errands", done: false },
+        { id: nextId++, text: "Draft remarks for Aunt Agatha's luncheon", group: "Personal", done: true },
+      ];
+      speak("Good morning, Madam. I have taken the liberty of preparing a sample ledger for your inspection.");
+    }
+  } catch {
+    speak("Good morning, Madam. How may I be of service?");
+  }
+  render();
+}
+
+async function saveTasks() {
+  if (sheetMode && APPS_SCRIPT_URL) {
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "write", tasks, nextId }),
+      });
+    } catch(e) {
+      console.warn("Sheet save failed:", e.message);
+    }
+  }
+  // Always keep localStorage as backup
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(tasks));
+    localStorage.setItem(LS_CTR, String(nextId));
+  } catch {}
+}
+
+function greetOnLoad() {
+  const pending = tasks.filter(t => !t.done).length;
+  if (tasks.length === 0) {
+    speak("Good morning, Madam. The ledger is quite empty. Shall we make a start?");
+  } else if (pending === 0) {
+    speak(QUIPS.allDone);
+  } else {
+    speak(RETURN_GREETINGS[Math.floor(Math.random() * RETURN_GREETINGS.length)](pending));
+  }
+}
+
+// ── Sheet status display ───────────────────────────────────────
+function setSheetStatus(state, msg) {
+  const el = document.getElementById("sheet-status");
+  if (state === "connected") {
+    el.innerHTML = `<span class="status-connected">✓ Google Sheet connected — tasks persist across sessions</span>`;
+  } else if (state === "error") {
+    el.innerHTML = `<span class="status-error" title="${msg || ''}">⚠ Sheet unavailable — working from local memory</span>`;
+  } else if (state === "setup") {
+    el.innerHTML = `<span class="status-error">⚠ Apps Script not configured — working from local memory (tasks persist on this device only)</span>`;
+    showSetupBanner();
+  } else {
+    el.innerHTML = `<span class="status-checking">⟳ Consulting the ledger…</span>`;
+  }
+}
+
+function showSetupBanner() {
+  document.getElementById("setup-banner-container").innerHTML = `
+    <div class="setup-banner" style="max-width:680px;margin:0 auto 20px;padding:16px 20px">
+      <strong>One-time setup required</strong> to enable cross-session persistence via Google Sheets.<br>
+      See the <code>README.md</code> in your GitHub repo for step-by-step instructions.
+      Until then, tasks are saved to this browser's local storage.
+    </div>`;
+}
+
+// ── Add task (with AI multi-task parsing) ─────────────────────
+let parsing = false;
+
+async function addTask() {
+  const input = document.getElementById("task-input");
+  const trimmed = input.value.trim();
+  if (!trimmed || parsing) return;
+
+  const looksLikeMultiple = /,|;|\n| and | then | also | plus /i.test(trimmed);
+
+  if (!looksLikeMultiple) {
+    pushTask(trimmed, selectedGroup);
+    input.value = "";
+    speak(quip(QUIPS.add));
+    await saveTasks();
+    render();
+    input.focus();
+    return;
+  }
+
+  // Multi-item: send to Claude for parsing
+  parsing = true;
+  const btn = document.getElementById("add-btn");
+  btn.textContent = "Consulting…";
+  btn.disabled = true;
+  speak("One moment, Madam. I am separating your obligations into discrete entries…");
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: `You are a task parser. The user gives you a sentence or list of tasks, possibly via voice-to-text. Extract each distinct task as a clean, concise action phrase. Assign each to the most appropriate group from: Personal, Work, Errands, Creative, Urgent. Respond ONLY with a JSON array, no preamble, no markdown. Format: [{"text":"task","group":"Group"}]`,
+        messages: [{ role: "user", content: trimmed }],
+      }),
+    });
+    const data = await res.json();
+    const raw = data.content?.find(b => b.type === "text")?.text || "[]";
+    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      parsed.forEach(item => pushTask(item.text, GROUPS.includes(item.group) ? item.group : selectedGroup));
+      input.value = "";
+      speak(parsed.length === 1
+        ? quip(QUIPS.add)
+        : `I have separated that into ${parsed.length} distinct obligations and entered them accordingly, Madam.`);
+    } else {
+      pushTask(trimmed, selectedGroup);
+      input.value = "";
+      speak(quip(QUIPS.add));
+    }
+  } catch {
+    pushTask(trimmed, selectedGroup);
+    input.value = "";
+    speak("I encountered a minor difficulty, Madam, but have recorded the matter regardless.");
+  }
+
+  parsing = false;
+  btn.textContent = "Add to Ledger";
+  btn.disabled = false;
+  await saveTasks();
+  render();
+  input.focus();
+}
+
+function pushTask(text, group) {
+  tasks.push({ id: nextId++, text, group, done: false });
+}
+
+// ── Toggle / delete ────────────────────────────────────────────
+async function toggleTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  speak(quip(t.done ? QUIPS.complete : QUIPS.undo));
+  if (tasks.every(t => t.done) && tasks.length > 0) speak(QUIPS.allDone);
+  await saveTasks();
+  render();
+}
+
+async function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  speak(quip(QUIPS.delete));
+  await saveTasks();
+  render();
+}
+
+// ── Group selector ─────────────────────────────────────────────
+function setGroup(g) {
+  selectedGroup = g;
+  renderGroupSelector();
+}
+
+function setFilter(g) {
+  filterGroup = g;
+  renderFilterChips();
+  renderTaskArea();
+}
+
+function toggleCompleted() {
+  showCompleted = !showCompleted;
+  const btn = document.getElementById("toggle-completed");
+  btn.textContent = showCompleted ? "Hide Completed" : "Show Completed";
+  btn.classList.toggle("active-gold", showCompleted);
+  renderTaskArea();
+}
+
+// ── Render ─────────────────────────────────────────────────────
+function render() {
+  renderGroupSelector();
+  renderFilterChips();
+  renderNextThree();
+  renderTaskArea();
+  renderFooter();
+}
+
+function renderGroupSelector() {
+  const el = document.getElementById("group-selector");
+  el.innerHTML = GROUPS.map(g => `
+    <button class="chip ${g === selectedGroup ? "active-dark" : ""}" onclick="setGroup('${g}')">${g}</button>
+  `).join("");
+}
+
+function renderFilterChips() {
+  const el = document.getElementById("filter-chips");
+  el.innerHTML = ["All", ...GROUPS].map(g => `
+    <button class="chip ${g === filterGroup ? "active-gold" : ""}" onclick="setFilter('${g}')">${g}</button>
+  `).join("");
+  const toggleBtn = document.getElementById("toggle-completed");
+  toggleBtn.classList.toggle("active-gold", showCompleted);
+}
+
+function renderNextThree() {
+  const pending = tasks.filter(t => !t.done);
+  const three = pending.slice(0, 3);
+  const el = document.getElementById("next-three-container");
+  if (three.length === 0) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <div class="next-three">
+      <p class="next-three-title">❧ Your most pressing matters, if I may draw your attention —</p>
+      <ul class="next-three-list">
+        ${three.map((t,i) => `
+          <li class="next-three-item">
+            <span class="next-three-num">${i+1}.</span>
+            <span class="next-three-text">${esc(t.text)}</span>
+            <span class="next-three-group">${t.group}</span>
+          </li>`).join("")}
+      </ul>
+    </div>`;
+}
+
+function renderTaskArea() {
+  const area = document.getElementById("task-area");
+  const filtered = tasks.filter(t => {
+    if (filterGroup !== "All" && t.group !== filterGroup) return false;
+    if (!showCompleted && t.done) return false;
+    return true;
+  });
+
+  const grouped = {};
+  GROUPS.forEach(g => {
+    const items = filtered.filter(t => t.group === g);
+    if (items.length) grouped[g] = items;
+  });
+
+  const keys = Object.keys(grouped);
+  if (keys.length === 0) {
+    area.innerHTML = `<p class="empty-msg">${QUIPS.empty}</p>`;
+    return;
+  }
+
+  area.innerHTML = keys.map(g => `
+    <div class="group-block">
+      <div class="group-header">
+        <span class="group-name">${g}</span>
+        <span class="group-count">${grouped[g].filter(t=>!t.done).length} remaining</span>
+      </div>
+      <div class="task-list">
+        ${grouped[g].map(t => `
+          <div class="task-row ${t.done ? "done" : ""}" id="task-${t.id}">
+            <button class="checkbox ${t.done ? "checked" : ""}" onclick="toggleTask(${t.id})" title="${t.done ? "Mark incomplete" : "Mark complete"}">${t.done ? "✓" : ""}</button>
+            <span class="task-text ${t.done ? "done" : ""}">${esc(t.text)}</span>
+            <button class="delete-btn" onclick="deleteTask(${t.id})" title="Remove this obligation">✕</button>
+          </div>`).join("")}
+      </div>
+    </div>`).join("");
+}
+
+function renderFooter() {
+  const pending = tasks.filter(t => !t.done).length;
+  document.getElementById("footer").textContent =
+    pending === 0
+      ? "Nothing outstanding, Madam."
+      : `${pending} obligation${pending !== 1 ? "s" : ""} yet to be resolved.`;
+}
+
+function esc(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── Enter key ─────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("task-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") addTask();
+  });
+  loadTasks();
+});
+</script>
+</body>
+</html>
